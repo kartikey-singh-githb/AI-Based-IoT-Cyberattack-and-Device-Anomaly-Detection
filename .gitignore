@@ -1,0 +1,63 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Databases / runtime data ----
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backend/data/runtime/
+backend/tests/_tmp/
+
+# ---- Trained models / artifacts ----
+backend/app/ml/artifacts/*
+!backend/app/ml/artifacts/.gitkeep
+
+# ---- Node / Frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Monitoring runtime ----
+monitoring/prometheus-data/
+monitoring/grafana-data/
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Local datasets (large downloads stay out of git) ----
+data/datasets/*
+!data/datasets/README.md
+!data/datasets/synthetic_sample.csv

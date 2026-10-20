@@ -1,0 +1,24 @@
+# Prometheus configuration for P310.
+# Backend exposes Prometheus text format at /metrics (see app/core/metrics.py).
+global:
+  scrape_interval: 5s
+  evaluation_interval: 10s
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: p310-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: p310-backend
+          environment: docker
+
+  # When you run the backend on the host (uvicorn app.main:app) instead of
+  # Docker, comment the target above and uncomment the one below.
+  # - targets: ["host.docker.internal:8000"]
+
+alerting:
+  alertmanagers: []

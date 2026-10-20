@@ -1,0 +1,90 @@
+# Optional full-stack deployment for P310.
+#
+#   docker compose up backend          # API only (uses the labelled
+#                                      # in-process fallback when Mosquitto
+#                                      # is not up yet)
+#   docker compose up                  # backend + mosquitto + prometheus
+#                                      # + grafana + frontend
+#
+# Without Docker the project runs natively:
+#   cd backend && uvicorn app.main:app --reload
+#   cd frontend && npm run dev
+
+services:
+  backend:
+    build: ./backend
+    container_name: p310-backend
+    ports:
+      - "8000:8000"
+    environment:
+      P310_ENVIRONMENT: docker
+      P310_HOST: 0.0.0.0
+      P310_DATABASE_URL: sqlite:////data/p310.db
+      P310_MQTT_HOST: mosquitto
+      P310_MQTT_PORT: "1883"
+      P310_SIM_AUTO_START: "true"
+      P310_CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080
+      P310_LOG_LEVEL: INFO
+    volumes:
+      - p310-data:/data
+      - ./backend/app/ml/artifacts:/app/ml/artifacts
+    depends_on:
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: p310-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./monitoring/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: p310-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: p310-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin        # change for anything real
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: p310-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  p310-data:
+  prometheus-data:
+  grafana-data:

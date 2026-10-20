@@ -1,0 +1,50 @@
+# Alert rules for the P310 backend.
+# These watch the *pipeline*, not the model's judgement: a detection is a
+# statistical anomaly, never a confirmed attack.
+groups:
+  - name: p310-pipeline
+    rules:
+      - alert: BackendDown
+        expr: up{job="p310-backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "P310 backend is not exposing metrics"
+          description: "Prometheus could not scrape {{ $labels.instance }} for 30s."
+
+      - alert: HighAnomalyRate
+        expr: sum(rate(p310_anomalies_total[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Anomaly rate above 0.5 events/second"
+          description: "The detector is flagging traffic quickly; check whether a scenario is running or the model needs retraining."
+
+      - alert: ModelMissing
+        expr: p310_model_trained == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No trained model is loaded"
+          description: "Detections are disabled until a model artifact is trained (POST /model/train)."
+
+      - alert: MqttFallbackActive
+        expr: p310_mqtt_fallback_active == 1
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Running on the labelled in-process MQTT fallback"
+          description: "No broker was reachable at {{ $labels.instance }}:1883. Traffic is still ingested through the fallback transport."
+
+      - alert: DetectionLatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(p310_detection_seconds_bucket[5m])) by (le)) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 detection latency above 50ms"
+          description: "Feature extraction plus inference is getting slow."

@@ -1,0 +1,136 @@
+{
+  "title": "P310 · IoT Anomaly Detection",
+  "uid": "p310-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "tags": ["p310", "iot", "anomaly-detection"],
+  "time": { "from": "now-30m", "to": "now" },
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Model loaded",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "p310_model_trained" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "NO MODEL", "color": "red" }, "1": { "text": "loaded", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "MQTT transport",
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "p310_mqtt_fallback_active" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "broker link", "color": "green" }, "1": { "text": "FALLBACK", "color": "orange" } } }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Simulation running",
+      "gridPos": { "h": 4, "w": 4, "x": 9, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "p310_simulation_running" }],
+      "fieldConfig": { "defaults": { "mappings": [ { "type": "value", "options": { "0": { "text": "stopped" }, "1": { "text": "running", "color": "blue" } } } ] }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Messages simulated",
+      "gridPos": { "h": 4, "w": 5, "x": 13, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "p310_simulation_messages_total" }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Telemetry ingest rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(p310_telemetry_total[1m])) by (source)", "legendFormat": "{{source}}" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2, "fillOpacity": 15 } }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Anomalies persisted (by severity)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(p310_anomalies_total[1m])) by (severity)", "legendFormat": "{{severity}}" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2, "fillOpacity": 15 } }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Alerts created (by severity)",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(p310_alerts_total[5m])) by (severity)", "legendFormat": "{{severity}}" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2, "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Detection latency (p50 / p95)",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(p310_detection_seconds_bucket[5m])) by (le))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(p310_detection_seconds_bucket[5m])) by (le))", "legendFormat": "p95" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Devices by status",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(p310_devices) by (status)", "legendFormat": "{{status}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 20, "stacking": { "mode": "normal" } } }, "overrides": [] }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "MQTT messages received",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "rate(p310_mqtt_messages_received_total[1m])" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2 } }, "overrides": [] }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "HTTP request rate / errors",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(p310_http_requests_total[1m]))", "legendFormat": "requests" },
+        { "refId": "B", "expr": "sum(rate(p310_errors_total[5m]))", "legendFormat": "errors" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2 } }, "overrides": [] }
+    }
+  ],
+  "annotations": { "list": [] },
+  "links": []
+}
