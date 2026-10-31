@@ -8,6 +8,7 @@ real database, model artifact or log file.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -26,6 +27,7 @@ os.environ.update(
         "P310_DATABASE_URL": f"sqlite:///{(TMP_DIR / 'test.db').as_posix()}",
         "P310_ML_MODEL_PATH": str(TMP_DIR / "model.joblib"),
         "P310_ML_MODEL_CONFIG_PATH": str(TMP_DIR / "model_config.json"),
+        "P310_ML_OFFLINE_MODEL_DIR": str(TMP_DIR / "offline"),
         "P310_LOG_FILE": str(TMP_DIR / "test.log"),
         "P310_LOG_LEVEL": "WARNING",
         "P310_SIM_AUTO_START": "false",
@@ -77,6 +79,7 @@ def clean_state(client):
             path.unlink()
         except OSError:
             pass
+    shutil.rmtree(settings.offline_model_dir_absolute, ignore_errors=True)
 
     with session_scope() as session:
         for table in reversed(Base.metadata.sorted_tables):

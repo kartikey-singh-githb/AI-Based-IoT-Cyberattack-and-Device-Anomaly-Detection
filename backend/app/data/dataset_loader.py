@@ -29,17 +29,29 @@ log = get_logger("dataset_loader")
 
 DEFAULT_DATASET_DIR = PROJECT_DIR / "data" / "datasets"
 
+# File extensions the loader understands.  The format is chosen from the
+# suffix; no content sniffing or implicit conversions are performed.
+SUPPORTED_FORMATS = {
+    ".csv": "csv",
+    ".parquet": "parquet",
+    ".pq": "parquet",
+}
+
 # Column names that never become model input.
 NON_FEATURE_COLUMNS = {
-    "label", "labels", "target", "class", "attack", "category", "type",
-    "device_id", "deviceid", "id", "flow_id", "timestamp", "time", "src_ip",
-    "dst_ip", "srcip", "dstip", "source", "label_encoded",
+    "label", "labels", "target", "class", "attack", "attack_class",
+    "attack_cat", "attack_type", "category", "type", "device_id", "deviceid",
+    "id", "row_id", "rowid", "record_id", "flow_id", "flow id", "flowid",
+    "index", "unnamed: 0", "timestamp", "time", "ts", "src_ip", "dst_ip",
+    "srcip", "dstip", "source", "label_encoded",
 }
 
 LABEL_COLUMN_CANDIDATES = [
     "label", "labels", "target", "class", "attack", "category", "Attack",
     "Label", "CLASS", "type",
 ]
+
+DEFAULT_SAMPLE_SEED = 42
 
 
 @dataclass
@@ -70,9 +82,11 @@ class DatasetEntry:
         if not self.available:
             return None
         try:
+            if _format_for_path(self.path) == "parquet":
+                return _parquet_metadata(self.path)[0]
             with self.path.open("rb") as fh:
                 return max(0, sum(1 for _ in fh) - 1)
-        except OSError:
+        except (OSError, DatasetError):
             return None
 
     def size_bytes(self) -> Optional[int]:
@@ -194,7 +208,13 @@ def get_dataset(dataset_id: str) -> DatasetEntry:
 def resolve_path(reference: str) -> Path:
     """Resolve a dataset id, a bare filename or a filesystem path."""
     if reference in REGISTRY:
-        return REGISTRY[reference].path
+        path = REGISTRY[reference].path
+        if not path.exists():
+            raise DatasetError(
+                f"Dataset '{reference}' is not available locally. Expected "
+                f"file: {path}. Place it there or pass an absolute path."
+            )
+        return path
 
     candidate = Path(reference)
     if candidate.is_absolute():
@@ -213,41 +233,122 @@ def resolve_path(reference: str) -> Path:
     )
 
 
-def load_frame(reference: str, *, limit_rows: Optional[int] = None
-               ) -> Tuple[pd.DataFrame, DatasetEntry]:
-    """Load a CSV into a DataFrame plus its registry metadata."""
+def _format_for_path(path: Path) -> str:
+    """Return ``csv`` or ``parquet`` based on the file extension."""
+    suffix = Path(path).suffix.lower()
+    fmt = SUPPORTED_FORMATS.get(suffix)
+    if fmt is None:
+        shown = suffix or "(no extension)"
+        raise DatasetError(
+            f"Unsupported dataset format '{shown}' for {path}. Supported "
+            "formats: CSV (.csv) and Parquet (.parquet, .pq)."
+        )
+    return fmt
+
+
+def _parquet_metadata(path: Path) -> Tuple[int, List[str]]:
+    """Read row count and column names from Parquet metadata only.
+
+    This does not load the data pages, so it can be used to inspect a file
+    without paying for a full read.
+    """
+    try:
+        import pyarrow.parquet as pq
+    except ImportError as exc:  # pragma: no cover - dependency is declared
+        raise DatasetError(
+            "PyArrow is required to read Parquet files. Install the "
+            "'pyarrow' package."
+        ) from exc
+    try:
+        parquet_file = pq.ParquetFile(path)
+        return (
+            int(parquet_file.metadata.num_rows),
+            [str(name) for name in parquet_file.schema_arrow.names],
+        )
+    except Exception as exc:
+        raise DatasetError(
+            f"Could not read Parquet metadata from {path}: {exc}"
+        ) from exc
+
+
+def read_columns(path: Path) -> List[str]:
+    """Return column names without loading the full dataset."""
+    path = Path(path)
+    if _format_for_path(path) == "parquet":
+        return _parquet_metadata(path)[1]
+    try:
+        return [str(c) for c in pd.read_csv(path, nrows=0).columns]
+    except Exception as exc:
+        raise DatasetError(f"Could not read CSV header {path}: {exc}") from exc
+
+
+def _read_frame(path: Path) -> pd.DataFrame:
+    fmt = _format_for_path(path)
+    try:
+        if fmt == "parquet":
+            return pd.read_parquet(path)
+        return pd.read_csv(path)
+    except Exception as exc:
+        label = "Parquet" if fmt == "parquet" else "CSV"
+        raise DatasetError(f"Could not read {label} {path}: {exc}") from exc
+
+
+def load_frame(
+    reference: str,
+    *,
+    limit_rows: Optional[int] = None,
+    seed: int = DEFAULT_SAMPLE_SEED,
+) -> Tuple[pd.DataFrame, DatasetEntry]:
+    """Load a CSV or Parquet file plus its dataset metadata.
+
+    ``limit_rows`` takes a reproducible random sample (``seed``) rather than
+    the first N rows, so a limited run still represents the whole file.
+    """
     path = resolve_path(reference)
     entry = REGISTRY.get(reference) or _entry_for_path(path)
 
-    try:
-        frame = pd.read_csv(path)
-    except Exception as exc:
-        raise DatasetError(f"Could not read CSV {path}: {exc}") from exc
+    if limit_rows is not None and limit_rows < 0:
+        raise DatasetError("limit_rows must be zero (no limit) or positive")
 
+    fmt = _format_for_path(path)
+    total_rows: Optional[int] = None
+    if fmt == "parquet":
+        total_rows, _ = _parquet_metadata(path)
+
+    frame = _read_frame(path)
     if frame.empty:
         raise DatasetError(f"Dataset {path} contains no rows")
-    if limit_rows:
-        frame = frame.head(limit_rows)
 
-    log.info("Loaded dataset %s: %d rows x %d columns",
-             path.name, frame.shape[0], frame.shape[1])
+    if limit_rows is not None and 0 < int(limit_rows) < len(frame):
+        frame = frame.sample(
+            n=int(limit_rows), random_state=seed
+        ).reset_index(drop=True)
+        log.info(
+            "Sampled %d/%d rows from %s with seed=%d",
+            len(frame), total_rows or len(frame), path.name, seed,
+        )
+
+    log.info("Loaded %s dataset %s: %d rows x %d columns",
+             fmt, path.name, frame.shape[0], frame.shape[1])
     return frame, entry
 
 
 def _entry_for_path(path: Path) -> DatasetEntry:
+    path = Path(path)
     for entry in REGISTRY.values():
         if entry.path.resolve() == path.resolve():
             return entry
+    fmt = _format_for_path(path)
     return DatasetEntry(
         id=path.stem,
         name=path.name,
         kind="public" if "synthetic" not in path.stem else "synthetic",
-        description="User-supplied CSV loaded from disk.",
+        description=f"User-supplied {fmt.upper()} loaded from disk.",
         source="local file",
         download_page="",
         license="Unknown - supplied by the operator.",
-        format="CSV",
-        features=", ".join(str(c) for c in pd.read_csv(path, nrows=0).columns),
+        format=fmt.upper(),
+        features=", ".join(read_columns(path)),
         preprocessing="Applied automatically by the trainer.",
         filename=path.name,
         notes="Not part of the built-in registry.",
@@ -273,6 +374,51 @@ def is_telemetry_shaped(frame: pd.DataFrame) -> bool:
     return sensor_hits >= 2
 
 
+def _encode_binary_labels(labels: pd.Series) -> Optional[pd.Series]:
+    """Map a label column onto 0 (benign/normal) and 1 (attack).
+
+    Numeric binary columns (CICIoT2023's ``label``) are honoured directly.
+    String labels such as ``normal`` / ``BenignTraffic`` and ``attack`` /
+    ``DDoS`` are handled without assuming a particular dataset's spelling.
+    Returns ``None`` when no unambiguous binary mapping exists.
+    """
+    series = pd.Series(labels)
+
+    numeric = pd.to_numeric(series, errors="coerce")
+    numeric_mask = numeric.notna()
+    if numeric_mask.all() and len(series) > 0:
+        unique = sorted({int(v) for v in numeric.unique()})
+        if set(unique) <= {0, 1}:
+            return numeric.astype(int)
+        if len(unique) == 2:
+            positive = unique[1]
+            return (numeric == positive).astype(int)
+        if len(unique) > 2 and 0 in unique:
+            return (numeric > 0).astype(int)
+        return None
+
+    lowered = series.astype(str).str.strip().str.lower()
+    normal_tokens = {
+        "normal", "benign", "benigntraffic", "benign traffic", "0", "legit",
+        "legitimate", "false",
+    }
+    attack_tokens = {
+        "attack", "malicious", "1", "true", "anomaly", "abnormal",
+    }
+    is_normal = lowered.isin(normal_tokens)
+    is_attack = lowered.isin(attack_tokens)
+
+    if is_normal.any() and (~is_normal).any():
+        # Anything that is not explicitly normal is treated as an attack.
+        return (~is_normal).astype(int)
+    if is_attack.any() and (~is_attack).any():
+        return is_attack.astype(int)
+    if lowered.nunique() == 2:
+        mapping = {value: i for i, value in enumerate(sorted(lowered.unique()))}
+        return lowered.map(mapping).astype(int)
+    return None
+
+
 def prepare_dataset_matrix(
     frame: pd.DataFrame,
     *,
@@ -294,13 +440,25 @@ def prepare_dataset_matrix(
         y = data[label_column]
         data = data.drop(columns=[label_column])
 
+        # Rows without a target cannot contribute to evaluation.
+        valid = y.notna()
+        if not valid.all():
+            log.warning(
+                "Dropping %d rows with a missing '%s' label",
+                int((~valid).sum()), label_column,
+            )
+            data = data.loc[valid]
+            y = y.loc[valid]
+
     drop = [c for c in data.columns if str(c).lower() in NON_FEATURE_COLUMNS]
     data = data.drop(columns=drop, errors="ignore")
 
     numeric = data.select_dtypes(include="number")
     # Remove constant columns and obvious identifiers (unique per row).
     numeric = numeric.loc[:, numeric.nunique(dropna=True) > 1]
-    numeric = numeric.replace([float("inf"), float("-inf")], pd.NA)
+    numeric = numeric.replace(
+        [float("inf"), float("-inf")], float("nan")
+    )
 
     if numeric.shape[1] == 0:
         raise DatasetError("No usable numeric feature columns found")
@@ -315,12 +473,9 @@ def prepare_dataset_matrix(
     numeric = numeric.fillna(medians).fillna(0.0)
 
     if y is not None:
-        # Map arbitrary labels onto binary normal/attack for evaluation.
-        y_bin = y.astype(str).str.lower().isin(
-            {"normal", "benign", "0", "legit", "legitimate", "false"}
-        ).map({True: 0, False: 1})
+        y_bin = _encode_binary_labels(y)
         # If everything collapsed to one class there is no ground truth.
-        if y_bin.nunique() < 2:
+        if y_bin is None or y_bin.nunique() < 2:
             y_bin = None
         y = y_bin
 

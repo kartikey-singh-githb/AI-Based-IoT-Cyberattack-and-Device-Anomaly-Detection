@@ -43,6 +43,12 @@ from app.data import dataset_loader as dl
 from app.data.synthetic import generate_synthetic_telemetry, label_distribution
 from app.ml.anomaly_detector import AnomalyDetector
 from app.ml.feature_engineering import FEATURE_NAMES, extract_dataset_features
+from app.ml.offline_calibration import (
+    binary_metrics,
+    calibrate_threshold,
+    category_detection_rates,
+    stratified_split_indices,
+)
 
 log = get_logger("train_model")
 
@@ -65,32 +71,51 @@ class TrainingOutcome:
     label_distribution: Dict[str, int] = field(default_factory=dict)
     notes: str = ""
     message: str = ""
+    artifact_path: str = ""
+    artifact_config_path: str = ""
 
 
 def train(
     *,
     dataset: str = "synthetic",
     csv_path: Optional[str] = None,
+    dataset_path: Optional[str] = None,
     contamination: Optional[float] = None,
     threshold: Optional[float] = None,
     label_column: Optional[str] = None,
     limit_rows: Optional[int] = 50_000,
     seed: Optional[int] = None,
+    offline_fit_on_benign: Optional[bool] = None,
+    calibration_min_precision: Optional[float] = None,
+    calibration_max_fpr: Optional[float] = None,
 ) -> TrainingOutcome:
-    """Dispatch to the right training route and return a fitted detector."""
+    """Dispatch to the right training route and return a fitted detector.
+
+    ``dataset='csv'`` remains the generic file mode for backwards
+    compatibility; the loader chooses CSV or Parquet from the file extension.
+    ``dataset='parquet'`` / ``'file'`` are accepted aliases.
+    """
     contamination = contamination if contamination is not None else settings.ml_contamination
     threshold = threshold if threshold is not None else settings.ml_anomaly_threshold
     seed = seed if seed is not None else settings.ml_random_seed
+    if limit_rows is None:
+        limit_rows = 50_000
 
     if dataset == "synthetic":
         return _train_stream_synthetic(
             contamination=contamination, threshold=threshold,
             label_column=label_column, seed=seed,
         )
-    if dataset == "csv":
-        if not csv_path:
-            raise ValueError("csv_path is required when dataset='csv'")
-        frame, entry = dl.load_frame(csv_path, limit_rows=limit_rows)
+    if dataset in {"csv", "parquet", "file"}:
+        path = (dataset_path or "").strip() or (csv_path or "").strip()
+        if not path:
+            raise ValueError(
+                "dataset_path (or csv_path) is required when training from a "
+                "file"
+            )
+        frame, entry = dl.load_frame(
+            path, limit_rows=limit_rows, seed=seed,
+        )
         if dl.is_telemetry_shaped(frame):
             return _train_stream_frame(
                 frame, entry=entry, contamination=contamination,
@@ -99,6 +124,9 @@ def train(
         return _train_dataset_space(
             frame, entry=entry, contamination=contamination,
             threshold=threshold, label_column=label_column, seed=seed,
+            offline_fit_on_benign=offline_fit_on_benign,
+            calibration_min_precision=calibration_min_precision,
+            calibration_max_fpr=calibration_max_fpr,
         )
     raise ValueError(f"Unknown dataset mode '{dataset}'")
 
@@ -227,8 +255,18 @@ def _train_dataset_space(
     threshold: float,
     label_column: Optional[str],
     seed: int,
+    offline_fit_on_benign: Optional[bool] = None,
+    calibration_min_precision: Optional[float] = None,
+    calibration_max_fpr: Optional[float] = None,
 ) -> TrainingOutcome:
-    """Train directly on a public dataset's numeric feature columns."""
+    """Train directly on a public dataset's numeric feature columns.
+
+    When both classes are available, the model is fitted on benign training
+    rows only and the alert threshold is selected on a validation split.  This
+    matters for attack-heavy datasets such as CICIoT2023: fitting on the full
+    sample teaches Isolation Forest that attacks are the normal baseline.  The
+    final test split is scored once and never used for fitting or calibration.
+    """
     started = time.perf_counter()
     detected = dl.detect_label_column(frame)
     label_column = label_column or detected
@@ -240,6 +278,22 @@ def _train_dataset_space(
     if X.shape[0] < 10:
         raise ValueError("Need at least 10 rows for training")
 
+    fit_on_benign = (
+        settings.ml_offline_fit_on_benign
+        if offline_fit_on_benign is None
+        else bool(offline_fit_on_benign)
+    )
+    min_precision = (
+        settings.ml_offline_calibration_min_precision
+        if calibration_min_precision is None
+        else float(calibration_min_precision)
+    )
+    max_fpr = (
+        settings.ml_offline_calibration_max_fpr
+        if calibration_max_fpr is None
+        else float(calibration_max_fpr)
+    )
+
     detector = AnomalyDetector(
         contamination=contamination,
         threshold=threshold,
@@ -249,38 +303,87 @@ def _train_dataset_space(
         feature_space="dataset",
     )
 
+    loaded_rows = int(X.shape[0])
+    fit_X = X
     metrics: Dict[str, Any] = {}
     measured = False
     eval_note = ""
+    categories = _category_values(frame, X_df.index)
+    split_metrics: Dict[str, Any] = {}
 
     if y is not None:
-        metrics, eval_note = _held_out_evaluation(
-            X, y.to_numpy(dtype=int), contamination=contamination,
-            flag_quantile=detector.flag_quantile, seed=seed,
-        )
-        measured = "accuracy" in metrics
+        y_all = y.to_numpy(dtype=int)
+        if len(np.unique(y_all)) > 1 and len(y_all) >= 40:
+            try:
+                train_idx, val_idx, test_idx = stratified_split_indices(
+                    y_all, seed=seed,
+                )
+            except ValueError as exc:
+                eval_note = f"Stratified split failed: {exc}"
+            else:
+                train_benign = y_all[train_idx] == 0
+                benign_rows = int(train_benign.sum())
+                use_benign_fit = fit_on_benign and benign_rows >= 10
+                fit_X = (
+                    X[train_idx][train_benign] if use_benign_fit
+                    else X[train_idx]
+                )
+                detector.train(
+                    fit_X,
+                    dataset_name=entry.name,
+                    dataset_kind=entry.kind,
+                    dataset_source=entry.download_page or entry.source,
+                    metrics={},
+                    notes="feature_space=dataset: offline scoring only, not "
+                          "usable by the live streaming detector.",
+                )
+                split_metrics = _dataset_holdout_metrics(
+                    detector,
+                    X_val=X[val_idx],
+                    y_val=y_all[val_idx],
+                    X_test=X[test_idx],
+                    y_test=y_all[test_idx],
+                    categories_test=(
+                        categories[test_idx] if categories is not None else None
+                    ),
+                    manual_threshold=threshold,
+                    min_precision=min_precision,
+                    max_fpr=max_fpr,
+                    fit_on_benign=use_benign_fit,
+                    loaded_rows=loaded_rows,
+                    fit_rows=int(fit_X.shape[0]),
+                )
+                metrics = split_metrics["test"]
+                measured = "accuracy" in metrics
+                eval_note = split_metrics["evaluation_note"]
+        else:
+            eval_note = "Insufficient label balance for calibration."
 
-    trained = detector.train(
-        X,
-        dataset_name=entry.name,
-        dataset_kind=entry.kind,
-        dataset_source=entry.download_page or entry.source,
-        metrics=metrics,
-        notes="feature_space=dataset: offline scoring only, not usable by the "
-              "live streaming detector.",
-    )
+    if not split_metrics:
+        detector.train(
+            fit_X,
+            dataset_name=entry.name,
+            dataset_kind=entry.kind,
+            dataset_source=entry.download_page or entry.source,
+            metrics={},
+            notes="feature_space=dataset: offline scoring only, not usable by "
+                  "the live streaming detector.",
+        )
+
     detector.metrics = {
         **metrics,
-        "evaluated_on": "held-out stratified split (25%)" if measured else "",
+        **{k: v for k, v in split_metrics.items() if k != "test"},
+        "evaluated_on": "held-out test split (20%)" if measured else "",
         "evaluation_note": eval_note or
             "No usable ground-truth labels; metrics not available.",
     }
 
+    trained_rows = int(detector.training_rows)
     return TrainingOutcome(
         detector=detector,
-        version=trained["version"],
-        training_rows=trained["training_rows"],
-        feature_count=trained["feature_count"],
+        version=detector.version,
+        training_rows=loaded_rows,
+        feature_count=len(used_columns),
         feature_names=list(used_columns),
         contamination=contamination,
         threshold=detector.threshold,
@@ -292,10 +395,137 @@ def _train_dataset_space(
         metrics_are_measured=measured,
         label_distribution=label_distribution(frame) if "label" in frame else {},
         notes="Offline model. The live detector only accepts feature_space="
-              "'stream' artifacts.",
-        message=f"Trained dataset-space model on {trained['training_rows']} "
-                f"rows in {time.perf_counter() - started:.2f}s.",
+              "'stream' artifacts. Fitted on benign training rows when labels "
+              "are available; threshold selected on a validation split.",
+        message=(
+            f"Trained dataset-space model on {trained_rows} "
+            f"{'benign ' if detector.metrics.get('fit_on_benign') else ''}"
+            f"rows (from {loaded_rows} loaded) in "
+            f"{time.perf_counter() - started:.2f}s."
+        ),
     )
+
+
+def _dataset_holdout_metrics(
+    detector: AnomalyDetector,
+    *,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    categories_test: Optional[np.ndarray],
+    manual_threshold: float,
+    min_precision: Optional[float],
+    max_fpr: Optional[float],
+    fit_on_benign: bool,
+    loaded_rows: int,
+    fit_rows: int,
+) -> Dict[str, Any]:
+    """Calibrate on validation and measure once on the held-out test split.
+
+    Calibration helpers use attack scores (``-decision_function``), where higher
+    means more anomalous.  The detector and its persisted ``threshold`` use raw
+    ``decision_function`` scores, where lower means more anomalous, so the
+    selected attack threshold is negated before it is stored and used for
+    prediction.  Manual thresholds are already in detector space.
+    """
+    if detector.model is None:
+        raise RuntimeError("Detector was not fitted before calibration")
+
+    raw_val = detector.model.decision_function(X_val)
+    validation_scores = -raw_val
+
+    if manual_threshold != 0.0:
+        detector_threshold = float(manual_threshold)
+        attack_threshold = -detector_threshold
+        selection = {
+            "mode": "manual",
+            "threshold": round(detector_threshold, 6),
+            "attack_threshold": round(attack_threshold, 6),
+            "note": "Manual detector threshold; validation calibration skipped.",
+        }
+    else:
+        try:
+            chosen = calibrate_threshold(
+                y_val,
+                validation_scores,
+                min_precision=min_precision,
+                max_fpr=max_fpr,
+            )
+            attack_threshold = float(chosen.threshold)
+            detector_threshold = -attack_threshold
+            selection = chosen.as_dict()
+            selection["attack_threshold"] = round(attack_threshold, 6)
+            selection["detector_threshold"] = round(detector_threshold, 6)
+        except ValueError as exc:
+            detector_threshold = float(detector.threshold)
+            attack_threshold = -detector_threshold
+            selection = {
+                "mode": "fallback_training_quantile",
+                "threshold": round(detector_threshold, 6),
+                "attack_threshold": round(attack_threshold, 6),
+                "note": f"Validation calibration failed: {exc}",
+            }
+
+    detector.threshold = detector_threshold
+    # Keep the reported severity threshold consistent with the calibrated
+    # decision threshold.  A manual/lower threshold must not make every anomaly
+    # critical by accident.
+    detector.suspicious_level = detector_threshold
+    detector.critical_level = min(
+        float(detector.critical_level), detector_threshold
+    )
+
+    val_preds = (raw_val < detector_threshold).astype(int)
+    validation_metrics = binary_metrics(y_val, val_preds, validation_scores)
+
+    raw_test = detector.model.decision_function(X_test)
+    test_scores = -raw_test
+    test_preds = (raw_test < detector_threshold).astype(int)
+    test_metrics = binary_metrics(y_test, test_preds, test_scores)
+    test_metrics.update({
+        "protocol": (
+            "offline hold-out: benign-only fit on the 60% train split, "
+            "threshold calibrated on the 20% validation split, metrics on the "
+            "untouched 20% test split"
+        ),
+        "evaluated_on": "held-out test split (20%)",
+        "threshold": round(detector_threshold, 6),
+        "attack_threshold": round(attack_threshold, 6),
+        "fit_rows": fit_rows,
+        "loaded_rows": loaded_rows,
+        "fit_on_benign": bool(fit_on_benign),
+        "threshold_selection": selection,
+        "validation": validation_metrics,
+    })
+    if categories_test is not None:
+        test_metrics["attack_categories"] = category_detection_rates(
+            categories_test, y_test, test_preds,
+        )
+
+    return {
+        "test": test_metrics,
+        "threshold_selection": selection,
+        "fit_rows": fit_rows,
+        "loaded_rows": loaded_rows,
+        "fit_on_benign": bool(fit_on_benign),
+        "validation": validation_metrics,
+        "evaluation_note": (
+            "Threshold selected on validation only. The test split is scored "
+            "once for the reported metrics and was not used for fitting, "
+            "preprocessing statistics, or threshold selection."
+        ),
+    }
+
+
+def _category_values(
+    frame: pd.DataFrame, index: pd.Index,
+) -> Optional[np.ndarray]:
+    """Return per-row attack categories aligned with the prepared matrix."""
+    for column in ("attack_class", "Attack Category", "Label", "label"):
+        if column in frame.columns and column != "label":
+            return frame.loc[index, column].astype(str).to_numpy()
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -412,8 +642,49 @@ class IsolationForestForEval:
 
 
 def save_outcome(outcome: TrainingOutcome) -> Path:
-    """Persist the trained artifact and its JSON configuration."""
+    """Persist the active (stream-space) artifact and its JSON configuration."""
     path = settings.model_path_absolute
     config = settings.model_config_path_absolute
     outcome.detector.save(path, config)
+    outcome.artifact_path = str(path)
+    outcome.artifact_config_path = str(config)
+    return path
+
+
+def save_offline_outcome(outcome: TrainingOutcome) -> Path:
+    """Persist a dataset-space model to the offline artifacts directory.
+
+    Offline artifacts deliberately live outside the active model path: they
+    are never loaded by the live MQTT detector and never replace the active
+    stream model.  Each run gets a version-specific ``.joblib`` + ``.json``
+    pair so models can be compared later.
+    """
+    if outcome.feature_space != "dataset":
+        raise ValueError(
+            "save_offline_outcome only accepts feature_space='dataset' "
+            f"outcomes (received '{outcome.feature_space}')"
+        )
+
+    directory = settings.offline_model_dir_absolute
+    directory.mkdir(parents=True, exist_ok=True)
+    safe_version = "".join(
+        ch if ch.isalnum() or ch in "-_." else "_" for ch in outcome.version
+    ) or "offline-model"
+    stem = safe_version
+    counter = 1
+    while (directory / f"{stem}.joblib").exists() or (
+        directory / f"{stem}.json"
+    ).exists():
+        counter += 1
+        stem = f"{safe_version}-{counter}"
+
+    path = directory / f"{stem}.joblib"
+    config = directory / f"{stem}.json"
+    outcome.detector.save(path, config)
+    outcome.artifact_path = str(path)
+    outcome.artifact_config_path = str(config)
+    log.info(
+        "Offline dataset model %s saved to %s (live detector untouched)",
+        outcome.version, path,
+    )
     return path

@@ -1,0 +1,1147 @@
+{
+  "generated_at": "2026-10-31T14:33:06+00:00",
+  "dataset": "D:\\New folder (2)\\PS_310\\datasets\\ciciot2023_train.parquet",
+  "dataset_name": "ciciot2023_train.parquet",
+  "limit_rows": 50000,
+  "seed": 42,
+  "features": [
+    "Header_Length",
+    "Protocol Type",
+    "Time_To_Live",
+    "Rate",
+    "fin_flag_number",
+    "syn_flag_number",
+    "rst_flag_number",
+    "psh_flag_number",
+    "ack_flag_number",
+    "ece_flag_number",
+    "cwr_flag_number",
+    "ack_count",
+    "syn_count",
+    "fin_count",
+    "rst_count",
+    "HTTP",
+    "HTTPS",
+    "DNS",
+    "Telnet",
+    "SMTP",
+    "SSH",
+    "IRC",
+    "TCP",
+    "UDP",
+    "DHCP",
+    "ARP",
+    "ICMP",
+    "IGMP",
+    "IPv",
+    "LLC",
+    "Tot sum",
+    "Min",
+    "Max",
+    "AVG",
+    "Std",
+    "Tot size",
+    "IAT",
+    "Number",
+    "Variance"
+  ],
+  "feature_count": 39,
+  "rows": 50000,
+  "attack_rate": 0.85016,
+  "split": {
+    "protocol": "stratified 60/20/20 train/validation/test",
+    "train_rows": 30000,
+    "validation_rows": 10000,
+    "test_rows": 10000
+  },
+  "calibration": {
+    "min_precision": 0.95,
+    "max_fpr": null,
+    "strategy": "max_f1"
+  },
+  "contamination_experiments": {
+    "0.01": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "contamination": 0.01,
+      "fit_rows": 4495,
+      "threshold": -0.108133,
+      "threshold_selection": {
+        "threshold": -0.108133,
+        "strategy": "max_f1",
+        "min_precision": 0.95,
+        "max_fpr": null,
+        "constraints_satisfied": true,
+        "validation_metrics": {
+          "evaluated_rows": 10000,
+          "label_positive_rate": 0.8501,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.804747,
+          "precision": 0.950667,
+          "recall": 0.863663,
+          "f1": 0.905079,
+          "predicted_positive_rate": 0.7723,
+          "false_positive_rate": 0.254169,
+          "false_negative_rate": 0.136337,
+          "confusion_matrix": {
+            "tn": 1118,
+            "fp": 381,
+            "fn": 1159,
+            "tp": 7342
+          },
+          "roc_auc": 0.887847,
+          "pr_auc": 0.977515
+        },
+        "note": "Selected on the validation split only; the test split was not used."
+      },
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "attack_categories": {
+        "Benign": {
+          "rows": 1498,
+          "detected": 365,
+          "detection_rate": 0.243658,
+          "label_positive_rate": 0.0
+        },
+        "BruteForce": {
+          "rows": 91,
+          "detected": 54,
+          "detection_rate": 0.593407,
+          "label_positive_rate": 1.0
+        },
+        "DDoS": {
+          "rows": 3397,
+          "detected": 3365,
+          "detection_rate": 0.99058,
+          "label_positive_rate": 1.0
+        },
+        "DoS": {
+          "rows": 1481,
+          "detected": 1471,
+          "detection_rate": 0.993248,
+          "label_positive_rate": 1.0
+        },
+        "Mirai": {
+          "rows": 1120,
+          "detected": 1114,
+          "detection_rate": 0.994643,
+          "label_positive_rate": 1.0
+        },
+        "Recon": {
+          "rows": 1509,
+          "detected": 974,
+          "detection_rate": 0.645461,
+          "label_positive_rate": 1.0
+        },
+        "Spoofing": {
+          "rows": 732,
+          "detected": 348,
+          "detection_rate": 0.47541,
+          "label_positive_rate": 1.0
+        },
+        "Web-based": {
+          "rows": 172,
+          "detected": 86,
+          "detection_rate": 0.5,
+          "label_positive_rate": 1.0
+        }
+      }
+    },
+    "0.03": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "contamination": 0.03,
+      "fit_rows": 4495,
+      "threshold": -0.0763,
+      "threshold_selection": {
+        "threshold": -0.0763,
+        "strategy": "max_f1",
+        "min_precision": 0.95,
+        "max_fpr": null,
+        "constraints_satisfied": true,
+        "validation_metrics": {
+          "evaluated_rows": 10000,
+          "label_positive_rate": 0.8501,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.804747,
+          "precision": 0.950667,
+          "recall": 0.863663,
+          "f1": 0.905079,
+          "predicted_positive_rate": 0.7723,
+          "false_positive_rate": 0.254169,
+          "false_negative_rate": 0.136337,
+          "confusion_matrix": {
+            "tn": 1118,
+            "fp": 381,
+            "fn": 1159,
+            "tp": 7342
+          },
+          "roc_auc": 0.887847,
+          "pr_auc": 0.977515
+        },
+        "note": "Selected on the validation split only; the test split was not used."
+      },
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "attack_categories": {
+        "Benign": {
+          "rows": 1498,
+          "detected": 365,
+          "detection_rate": 0.243658,
+          "label_positive_rate": 0.0
+        },
+        "BruteForce": {
+          "rows": 91,
+          "detected": 54,
+          "detection_rate": 0.593407,
+          "label_positive_rate": 1.0
+        },
+        "DDoS": {
+          "rows": 3397,
+          "detected": 3365,
+          "detection_rate": 0.99058,
+          "label_positive_rate": 1.0
+        },
+        "DoS": {
+          "rows": 1481,
+          "detected": 1471,
+          "detection_rate": 0.993248,
+          "label_positive_rate": 1.0
+        },
+        "Mirai": {
+          "rows": 1120,
+          "detected": 1114,
+          "detection_rate": 0.994643,
+          "label_positive_rate": 1.0
+        },
+        "Recon": {
+          "rows": 1509,
+          "detected": 974,
+          "detection_rate": 0.645461,
+          "label_positive_rate": 1.0
+        },
+        "Spoofing": {
+          "rows": 732,
+          "detected": 348,
+          "detection_rate": 0.47541,
+          "label_positive_rate": 1.0
+        },
+        "Web-based": {
+          "rows": 172,
+          "detected": 86,
+          "detection_rate": 0.5,
+          "label_positive_rate": 1.0
+        }
+      }
+    },
+    "0.05": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "contamination": 0.05,
+      "fit_rows": 4495,
+      "threshold": -0.060914,
+      "threshold_selection": {
+        "threshold": -0.060914,
+        "strategy": "max_f1",
+        "min_precision": 0.95,
+        "max_fpr": null,
+        "constraints_satisfied": true,
+        "validation_metrics": {
+          "evaluated_rows": 10000,
+          "label_positive_rate": 0.8501,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.804747,
+          "precision": 0.950667,
+          "recall": 0.863663,
+          "f1": 0.905079,
+          "predicted_positive_rate": 0.7723,
+          "false_positive_rate": 0.254169,
+          "false_negative_rate": 0.136337,
+          "confusion_matrix": {
+            "tn": 1118,
+            "fp": 381,
+            "fn": 1159,
+            "tp": 7342
+          },
+          "roc_auc": 0.887847,
+          "pr_auc": 0.977515
+        },
+        "note": "Selected on the validation split only; the test split was not used."
+      },
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "attack_categories": {
+        "Benign": {
+          "rows": 1498,
+          "detected": 365,
+          "detection_rate": 0.243658,
+          "label_positive_rate": 0.0
+        },
+        "BruteForce": {
+          "rows": 91,
+          "detected": 54,
+          "detection_rate": 0.593407,
+          "label_positive_rate": 1.0
+        },
+        "DDoS": {
+          "rows": 3397,
+          "detected": 3365,
+          "detection_rate": 0.99058,
+          "label_positive_rate": 1.0
+        },
+        "DoS": {
+          "rows": 1481,
+          "detected": 1471,
+          "detection_rate": 0.993248,
+          "label_positive_rate": 1.0
+        },
+        "Mirai": {
+          "rows": 1120,
+          "detected": 1114,
+          "detection_rate": 0.994643,
+          "label_positive_rate": 1.0
+        },
+        "Recon": {
+          "rows": 1509,
+          "detected": 974,
+          "detection_rate": 0.645461,
+          "label_positive_rate": 1.0
+        },
+        "Spoofing": {
+          "rows": 732,
+          "detected": 348,
+          "detection_rate": 0.47541,
+          "label_positive_rate": 1.0
+        },
+        "Web-based": {
+          "rows": 172,
+          "detected": 86,
+          "detection_rate": 0.5,
+          "label_positive_rate": 1.0
+        }
+      }
+    },
+    "0.10": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "contamination": 0.1,
+      "fit_rows": 4495,
+      "threshold": -0.035104,
+      "threshold_selection": {
+        "threshold": -0.035104,
+        "strategy": "max_f1",
+        "min_precision": 0.95,
+        "max_fpr": null,
+        "constraints_satisfied": true,
+        "validation_metrics": {
+          "evaluated_rows": 10000,
+          "label_positive_rate": 0.8501,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.804747,
+          "precision": 0.950667,
+          "recall": 0.863663,
+          "f1": 0.905079,
+          "predicted_positive_rate": 0.7723,
+          "false_positive_rate": 0.254169,
+          "false_negative_rate": 0.136337,
+          "confusion_matrix": {
+            "tn": 1118,
+            "fp": 381,
+            "fn": 1159,
+            "tp": 7342
+          },
+          "roc_auc": 0.887847,
+          "pr_auc": 0.977515
+        },
+        "note": "Selected on the validation split only; the test split was not used."
+      },
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "attack_categories": {
+        "Benign": {
+          "rows": 1498,
+          "detected": 365,
+          "detection_rate": 0.243658,
+          "label_positive_rate": 0.0
+        },
+        "BruteForce": {
+          "rows": 91,
+          "detected": 54,
+          "detection_rate": 0.593407,
+          "label_positive_rate": 1.0
+        },
+        "DDoS": {
+          "rows": 3397,
+          "detected": 3365,
+          "detection_rate": 0.99058,
+          "label_positive_rate": 1.0
+        },
+        "DoS": {
+          "rows": 1481,
+          "detected": 1471,
+          "detection_rate": 0.993248,
+          "label_positive_rate": 1.0
+        },
+        "Mirai": {
+          "rows": 1120,
+          "detected": 1114,
+          "detection_rate": 0.994643,
+          "label_positive_rate": 1.0
+        },
+        "Recon": {
+          "rows": 1509,
+          "detected": 974,
+          "detection_rate": 0.645461,
+          "label_positive_rate": 1.0
+        },
+        "Spoofing": {
+          "rows": 732,
+          "detected": 348,
+          "detection_rate": 0.47541,
+          "label_positive_rate": 1.0
+        },
+        "Web-based": {
+          "rows": 172,
+          "detected": 86,
+          "detection_rate": 0.5,
+          "label_positive_rate": 1.0
+        }
+      }
+    }
+  },
+  "baseline_same_split": {
+    "evaluated_rows": 10000,
+    "label_positive_rate": 0.8502,
+    "accuracy": 0.1843,
+    "balanced_accuracy": 0.497192,
+    "precision": 0.836257,
+    "recall": 0.050459,
+    "f1": 0.095175,
+    "predicted_positive_rate": 0.0513,
+    "false_positive_rate": 0.056075,
+    "false_negative_rate": 0.949541,
+    "confusion_matrix": {
+      "tn": 1414,
+      "fp": 84,
+      "fn": 8073,
+      "tp": 429
+    },
+    "roc_auc": 0.331671,
+    "pr_auc": 0.803049,
+    "threshold": 0.0,
+    "fit_rows": 30000,
+    "protocol": "same 60/20/20 split, but fitted on all training rows with the legacy training-quantile threshold"
+  },
+  "selected_contamination": 0.05,
+  "selected_test_metrics": {
+    "evaluated_rows": 10000,
+    "label_positive_rate": 0.8502,
+    "accuracy": 0.8545,
+    "balanced_accuracy": 0.814068,
+    "precision": 0.953067,
+    "recall": 0.871795,
+    "f1": 0.910621,
+    "predicted_positive_rate": 0.7777,
+    "false_positive_rate": 0.243658,
+    "false_negative_rate": 0.128205,
+    "confusion_matrix": {
+      "tn": 1133,
+      "fp": 365,
+      "fn": 1090,
+      "tp": 7412
+    },
+    "roc_auc": 0.889764,
+    "pr_auc": 0.975823,
+    "contamination": 0.05,
+    "fit_rows": 4495,
+    "threshold": -0.060914,
+    "threshold_selection": {
+      "threshold": -0.060914,
+      "strategy": "max_f1",
+      "min_precision": 0.95,
+      "max_fpr": null,
+      "constraints_satisfied": true,
+      "validation_metrics": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "note": "Selected on the validation split only; the test split was not used."
+    },
+    "validation": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8501,
+      "accuracy": 0.846,
+      "balanced_accuracy": 0.804747,
+      "precision": 0.950667,
+      "recall": 0.863663,
+      "f1": 0.905079,
+      "predicted_positive_rate": 0.7723,
+      "false_positive_rate": 0.254169,
+      "false_negative_rate": 0.136337,
+      "confusion_matrix": {
+        "tn": 1118,
+        "fp": 381,
+        "fn": 1159,
+        "tp": 7342
+      },
+      "roc_auc": 0.887847,
+      "pr_auc": 0.977515
+    },
+    "attack_categories": {
+      "Benign": {
+        "rows": 1498,
+        "detected": 365,
+        "detection_rate": 0.243658,
+        "label_positive_rate": 0.0
+      },
+      "BruteForce": {
+        "rows": 91,
+        "detected": 54,
+        "detection_rate": 0.593407,
+        "label_positive_rate": 1.0
+      },
+      "DDoS": {
+        "rows": 3397,
+        "detected": 3365,
+        "detection_rate": 0.99058,
+        "label_positive_rate": 1.0
+      },
+      "DoS": {
+        "rows": 1481,
+        "detected": 1471,
+        "detection_rate": 0.993248,
+        "label_positive_rate": 1.0
+      },
+      "Mirai": {
+        "rows": 1120,
+        "detected": 1114,
+        "detection_rate": 0.994643,
+        "label_positive_rate": 1.0
+      },
+      "Recon": {
+        "rows": 1509,
+        "detected": 974,
+        "detection_rate": 0.645461,
+        "label_positive_rate": 1.0
+      },
+      "Spoofing": {
+        "rows": 732,
+        "detected": 348,
+        "detection_rate": 0.47541,
+        "label_positive_rate": 1.0
+      },
+      "Web-based": {
+        "rows": 172,
+        "detected": 86,
+        "detection_rate": 0.5,
+        "label_positive_rate": 1.0
+      }
+    }
+  },
+  "threshold_policies": {
+    "max_f1_unconstrained": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8709,
+      "balanced_accuracy": 0.653782,
+      "precision": 0.892884,
+      "recall": 0.963773,
+      "f1": 0.926976,
+      "predicted_positive_rate": 0.9177,
+      "false_positive_rate": 0.656208,
+      "false_negative_rate": 0.036227,
+      "confusion_matrix": {
+        "tn": 515,
+        "fp": 983,
+        "fn": 308,
+        "tp": 8194
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.118583,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.8689,
+        "balanced_accuracy": 0.650625,
+        "precision": 0.891954,
+        "recall": 0.962357,
+        "f1": 0.925819,
+        "predicted_positive_rate": 0.9172,
+        "false_positive_rate": 0.661107,
+        "false_negative_rate": 0.037643,
+        "confusion_matrix": {
+          "tn": 508,
+          "fp": 991,
+          "fn": 320,
+          "tp": 8181
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_precision_0.90": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8717,
+      "balanced_accuracy": 0.689449,
+      "precision": 0.904245,
+      "recall": 0.949659,
+      "f1": 0.926396,
+      "predicted_positive_rate": 0.8929,
+      "false_positive_rate": 0.570761,
+      "false_negative_rate": 0.050341,
+      "confusion_matrix": {
+        "tn": 643,
+        "fp": 855,
+        "fn": 428,
+        "tp": 8074
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.107782,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.8654,
+        "balanced_accuracy": 0.680436,
+        "precision": 0.901741,
+        "recall": 0.944595,
+        "f1": 0.92267,
+        "predicted_positive_rate": 0.8905,
+        "false_positive_rate": 0.583722,
+        "false_negative_rate": 0.055405,
+        "confusion_matrix": {
+          "tn": 624,
+          "fp": 875,
+          "fn": 471,
+          "tp": 8030
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_precision_0.95": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.060914,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.846,
+        "balanced_accuracy": 0.804747,
+        "precision": 0.950667,
+        "recall": 0.863663,
+        "f1": 0.905079,
+        "predicted_positive_rate": 0.7723,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136337,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1159,
+          "tp": 7342
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_precision_0.97": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.7429,
+      "balanced_accuracy": 0.801231,
+      "precision": 0.972439,
+      "recall": 0.717949,
+      "f1": 0.826037,
+      "predicted_positive_rate": 0.6277,
+      "false_positive_rate": 0.115487,
+      "false_negative_rate": 0.282051,
+      "confusion_matrix": {
+        "tn": 1325,
+        "fp": 173,
+        "fn": 2398,
+        "tp": 6104
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.02979,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.734,
+        "balanced_accuracy": 0.792446,
+        "precision": 0.970063,
+        "recall": 0.708975,
+        "f1": 0.81922,
+        "predicted_positive_rate": 0.6213,
+        "false_positive_rate": 0.124083,
+        "false_negative_rate": 0.291025,
+        "confusion_matrix": {
+          "tn": 1313,
+          "fp": 186,
+          "fn": 2474,
+          "tp": 6027
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_precision_0.99": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.6865,
+      "balanced_accuracy": 0.794734,
+      "precision": 0.986229,
+      "recall": 0.640202,
+      "f1": 0.776407,
+      "predicted_positive_rate": 0.5519,
+      "false_positive_rate": 0.050734,
+      "false_negative_rate": 0.359798,
+      "confusion_matrix": {
+        "tn": 1422,
+        "fp": 76,
+        "fn": 3059,
+        "tp": 5443
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": 0.003932,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.6827,
+        "balanced_accuracy": 0.798539,
+        "precision": 0.990066,
+        "recall": 0.633102,
+        "f1": 0.772333,
+        "predicted_positive_rate": 0.5436,
+        "false_positive_rate": 0.036024,
+        "false_negative_rate": 0.366898,
+        "confusion_matrix": {
+          "tn": 1445,
+          "fp": 54,
+          "fn": 3119,
+          "tp": 5382
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_fpr_0.10": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.7338,
+      "balanced_accuracy": 0.803028,
+      "precision": 0.976035,
+      "recall": 0.704187,
+      "f1": 0.81812,
+      "predicted_positive_rate": 0.6134,
+      "false_positive_rate": 0.098131,
+      "false_negative_rate": 0.295813,
+      "confusion_matrix": {
+        "tn": 1351,
+        "fp": 147,
+        "fn": 2515,
+        "tp": 5987
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.023394,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.7264,
+        "balanced_accuracy": 0.798142,
+        "precision": 0.975425,
+        "recall": 0.695683,
+        "f1": 0.81214,
+        "predicted_positive_rate": 0.6063,
+        "false_positive_rate": 0.0994,
+        "false_negative_rate": 0.304317,
+        "confusion_matrix": {
+          "tn": 1350,
+          "fp": 149,
+          "fn": 2587,
+          "tp": 5914
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    },
+    "max_f1_fpr_0.05": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.7021,
+      "balanced_accuracy": 0.800059,
+      "precision": 0.984219,
+      "recall": 0.660198,
+      "f1": 0.790285,
+      "predicted_positive_rate": 0.5703,
+      "false_positive_rate": 0.06008,
+      "false_negative_rate": 0.339802,
+      "confusion_matrix": {
+        "tn": 1408,
+        "fp": 90,
+        "fn": 2889,
+        "tp": 5613
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "threshold": -0.004147,
+      "constraints_satisfied": true,
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.696,
+        "balanced_accuracy": 0.800867,
+        "precision": 0.986807,
+        "recall": 0.6511,
+        "f1": 0.78455,
+        "predicted_positive_rate": 0.5609,
+        "false_positive_rate": 0.049366,
+        "false_negative_rate": 0.3489,
+        "confusion_matrix": {
+          "tn": 1425,
+          "fp": 74,
+          "fn": 2966,
+          "tp": 5535
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      }
+    }
+  },
+  "artifact": {
+    "version": "if-20261031-143305",
+    "path": "D:\\New folder (2)\\PS_310\\backend\\app\\ml\\artifacts\\offline\\if-20261031-143305.joblib",
+    "config_path": "D:\\New folder (2)\\PS_310\\backend\\app\\ml\\artifacts\\offline\\if-20261031-143305.json",
+    "metrics": {
+      "evaluated_rows": 10000,
+      "label_positive_rate": 0.8502,
+      "accuracy": 0.8545,
+      "balanced_accuracy": 0.814068,
+      "precision": 0.953067,
+      "recall": 0.871795,
+      "f1": 0.910621,
+      "predicted_positive_rate": 0.7777,
+      "false_positive_rate": 0.243658,
+      "false_negative_rate": 0.128205,
+      "confusion_matrix": {
+        "tn": 1133,
+        "fp": 365,
+        "fn": 1090,
+        "tp": 7412
+      },
+      "roc_auc": 0.889764,
+      "pr_auc": 0.975823,
+      "protocol": "offline hold-out: benign-only fit on the 60% train split, threshold calibrated on the 20% validation split, metrics on the untouched 20% test split",
+      "evaluated_on": "held-out test split (20%)",
+      "threshold": 0.060914,
+      "attack_threshold": -0.060914,
+      "fit_rows": 4495,
+      "loaded_rows": 50000,
+      "fit_on_benign": true,
+      "threshold_selection": {
+        "threshold": -0.060914,
+        "strategy": "max_f1",
+        "min_precision": 0.95,
+        "max_fpr": null,
+        "constraints_satisfied": true,
+        "validation_metrics": {
+          "evaluated_rows": 10000,
+          "label_positive_rate": 0.8501,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.804747,
+          "precision": 0.950667,
+          "recall": 0.863663,
+          "f1": 0.905079,
+          "predicted_positive_rate": 0.7723,
+          "false_positive_rate": 0.254169,
+          "false_negative_rate": 0.136337,
+          "confusion_matrix": {
+            "tn": 1118,
+            "fp": 381,
+            "fn": 1159,
+            "tp": 7342
+          },
+          "roc_auc": 0.887847,
+          "pr_auc": 0.977515
+        },
+        "note": "Selected on the validation split only; the test split was not used.",
+        "attack_threshold": -0.060914,
+        "detector_threshold": 0.060914
+      },
+      "validation": {
+        "evaluated_rows": 10000,
+        "label_positive_rate": 0.8501,
+        "accuracy": 0.8459,
+        "balanced_accuracy": 0.804688,
+        "precision": 0.95066,
+        "recall": 0.863545,
+        "f1": 0.905011,
+        "predicted_positive_rate": 0.7722,
+        "false_positive_rate": 0.254169,
+        "false_negative_rate": 0.136455,
+        "confusion_matrix": {
+          "tn": 1118,
+          "fp": 381,
+          "fn": 1160,
+          "tp": 7341
+        },
+        "roc_auc": 0.887847,
+        "pr_auc": 0.977515
+      },
+      "attack_categories": {
+        "Benign": {
+          "rows": 1498,
+          "detected": 365,
+          "detection_rate": 0.243658,
+          "label_positive_rate": 0.0
+        },
+        "BruteForce": {
+          "rows": 91,
+          "detected": 54,
+          "detection_rate": 0.593407,
+          "label_positive_rate": 1.0
+        },
+        "DDoS": {
+          "rows": 3397,
+          "detected": 3365,
+          "detection_rate": 0.99058,
+          "label_positive_rate": 1.0
+        },
+        "DoS": {
+          "rows": 1481,
+          "detected": 1471,
+          "detection_rate": 0.993248,
+          "label_positive_rate": 1.0
+        },
+        "Mirai": {
+          "rows": 1120,
+          "detected": 1114,
+          "detection_rate": 0.994643,
+          "label_positive_rate": 1.0
+        },
+        "Recon": {
+          "rows": 1509,
+          "detected": 974,
+          "detection_rate": 0.645461,
+          "label_positive_rate": 1.0
+        },
+        "Spoofing": {
+          "rows": 732,
+          "detected": 348,
+          "detection_rate": 0.47541,
+          "label_positive_rate": 1.0
+        },
+        "Web-based": {
+          "rows": 172,
+          "detected": 86,
+          "detection_rate": 0.5,
+          "label_positive_rate": 1.0
+        }
+      },
+      "evaluation_note": "Threshold selected on validation only. The test split is scored once for the reported metrics and was not used for fitting, preprocessing statistics, or threshold selection."
+    }
+  },
+  "baseline": {
+    "version": "if-20261031-132946",
+    "metrics": {
+      "protocol": "unsupervised hold-out: fit on the 75% training split, evaluate on the held-out 25% split",
+      "evaluated_rows": 12500,
+      "fit_rows": 37500,
+      "threshold": 0.0,
+      "flag_quantile": 0.05,
+      "accuracy": 0.1822,
+      "precision": 0.8301,
+      "recall": 0.0478,
+      "f1": 0.0904,
+      "confusion_matrix": {
+        "tn": 1769,
+        "fp": 104,
+        "fn": 10119,
+        "tp": 508
+      },
+      "predicted_positive_rate": 0.049,
+      "label_positive_rate": 0.8502,
+      "roc_auc": 0.3553,
+      "evaluated_on": "held-out stratified split (25%)",
+      "evaluation_note": "Held-out metrics from a stratified 75/25 split. The model is fitted on the training split only; the persisted artifact is subsequently refitted on the full sequence, so these figures describe the evaluation split rather than the exact saved estimator."
+    }
+  }
+}

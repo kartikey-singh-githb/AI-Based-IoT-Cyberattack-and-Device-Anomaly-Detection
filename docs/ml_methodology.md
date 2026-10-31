@@ -91,6 +91,30 @@ trained in a separate `feature_space="dataset"` and the runtime detector
 serving a model on the wrong features would produce confident nonsense.
 See `data/datasets/README.md` for how to obtain and load them.
 
+Offline labelled datasets use a different fitting protocol from the live stream.
+CICIoT2023 is roughly 85% attacks in the bundled sample; fitting Isolation Forest
+on all rows teaches it that attack traffic is normal. When a usable label column
+is present, the offline route therefore:
+
+1. splits rows into stratified 60% train / 20% validation / 20% test;
+2. fits on benign training rows only;
+3. selects the alert threshold on validation by maximising F1 subject to a
+   configurable precision floor (`P310_ML_OFFLINE_CALIBRATION_MIN_PRECISION`,
+   default 0.95) and optional FPR cap;
+4. scores the untouched test split once for the reported metrics.
+
+Calibration uses attack scores (`-decision_function`, higher is more
+anomalous), then stores the sign-flipped threshold because `AnomalyDetector`
+flags raw `decision_function` scores below its threshold. For example, an
+attack-score cutoff of `-0.060914` is persisted as detector threshold
+`+0.060914`.
+
+`contamination` remains the estimator setting, but validation calibration makes
+it non-decisional: changing it shifts the score offset without changing the
+ranking, and the calibrated threshold absorbs that shift. The full measured
+comparison, contamination sweep, threshold trade-offs, and per-category results
+are in `docs/offline_model_optimization.md`.
+
 ## 6. Caveats (read before showing this to anyone)
 
 1. **All data in this project is simulated.** Devices are virtual; every

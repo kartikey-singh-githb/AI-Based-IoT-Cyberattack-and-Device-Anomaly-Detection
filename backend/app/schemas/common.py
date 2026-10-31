@@ -273,19 +273,65 @@ class ModelInfo(BaseModel):
 class TrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    dataset: Literal["synthetic", "csv"] = "synthetic"
+    dataset: Literal["synthetic", "csv", "parquet", "file"] = "synthetic"
     csv_path: Optional[str] = Field(
-        None, max_length=512,
-        description="Path to a CSV file, relative to data/datasets or absolute.",
+        None, max_length=1024,
+        description=(
+            "Backwards-compatible path to a CSV or Parquet file, relative to "
+            "data/datasets or absolute."
+        ),
+    )
+    dataset_path: Optional[str] = Field(
+        None, max_length=1024,
+        description=(
+            "Path to a CSV or Parquet dataset file. Takes precedence over "
+            "csv_path. The path is resolved on the backend host."
+        ),
     )
     contamination: Optional[float] = Field(None, gt=0, lt=0.5)
     threshold: Optional[float] = None
+    offline_fit_on_benign: Optional[bool] = Field(
+        None,
+        description=(
+            "Offline dataset models: fit on benign training rows when labels "
+            "are available. Defaults to the backend setting."
+        ),
+    )
+    calibration_min_precision: Optional[float] = Field(
+        None, ge=0, le=1,
+        description=(
+            "Offline dataset models: validation precision floor when choosing "
+            "the F1-maximising alert threshold. Use 0 for pure F1."
+        ),
+    )
+    calibration_max_fpr: Optional[float] = Field(
+        None, ge=0, le=1,
+        description=(
+            "Offline dataset models: optional validation false-positive-rate "
+            "cap for threshold selection."
+        ),
+    )
     label_column: Optional[str] = Field(
         None, max_length=64,
         json_schema_extra={
             "help": "Optional ground-truth label column for evaluation metrics."
         },
     )
+    limit_rows: Optional[int] = Field(
+        None, ge=0,
+        description=(
+            "Reproducible random sample size. Omit for the default 50,000; "
+            "use 0 to load every row."
+        ),
+    )
+
+    @field_validator("csv_path", "dataset_path", mode="before")
+    @classmethod
+    def _blank_path_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
 
 
 class TrainResponse(BaseModel):
@@ -301,6 +347,10 @@ class TrainResponse(BaseModel):
     metrics: Dict[str, Any]
     metrics_are_measured: bool
     message: str
+    feature_space: str = "stream"
+    offline: bool = False
+    artifact_path: Optional[str] = None
+    artifact_config_path: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

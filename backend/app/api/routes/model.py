@@ -60,13 +60,29 @@ def model_history(
 @router.post("/model/train", response_model=TrainResponse,
              summary="Train (or retrain) the anomaly model")
 def train(payload: TrainRequest, session: Session = Depends(get_db)) -> TrainResponse:
+    log.info(
+        "Training request: dataset=%s path=%s label=%s limit_rows=%s "
+        "offline_fit_on_benign=%s min_precision=%s max_fpr=%s",
+        payload.dataset,
+        payload.dataset_path or payload.csv_path,
+        payload.label_column,
+        payload.limit_rows,
+        payload.offline_fit_on_benign,
+        payload.calibration_min_precision,
+        payload.calibration_max_fpr,
+    )
     try:
         outcome = train_model.train(
             dataset=payload.dataset,
             csv_path=payload.csv_path,
+            dataset_path=payload.dataset_path,
             contamination=payload.contamination,
             threshold=payload.threshold,
             label_column=payload.label_column,
+            limit_rows=payload.limit_rows,
+            offline_fit_on_benign=payload.offline_fit_on_benign,
+            calibration_min_precision=payload.calibration_min_precision,
+            calibration_max_fpr=payload.calibration_max_fpr,
         )
     except (ValueError, dl.DatasetError) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -74,8 +90,26 @@ def train(payload: TrainRequest, session: Session = Depends(get_db)) -> TrainRes
         log.exception("Training failed")
         raise HTTPException(status_code=500, detail=f"Training failed: {exc}")
 
-    model_info_service.train_and_activate(session, outcome)
-    session.commit()
+    offline = outcome.feature_space != "stream"
+    if offline:
+        # Dataset-space models are offline artifacts only.  They must never
+        # overwrite the active stream model, replace the live detector, or
+        # alter the active ModelMetadata row.
+        try:
+            train_model.save_offline_outcome(outcome)
+        except Exception as exc:  # pragma: no cover - defensive
+            log.exception("Saving offline model failed")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Saving offline model failed: {exc}",
+            )
+        log.info(
+            "Offline model %s trained; live stream model left untouched",
+            outcome.version,
+        )
+    else:
+        model_info_service.train_and_activate(session, outcome)
+        session.commit()
 
     return TrainResponse(
         status="trained",
@@ -90,6 +124,10 @@ def train(payload: TrainRequest, session: Session = Depends(get_db)) -> TrainRes
         metrics=outcome.metrics,
         metrics_are_measured=outcome.metrics_are_measured,
         message=outcome.message,
+        feature_space=outcome.feature_space,
+        offline=offline,
+        artifact_path=outcome.artifact_path or None,
+        artifact_config_path=outcome.artifact_config_path or None,
     )
 
 

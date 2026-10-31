@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -70,6 +70,18 @@ class Settings(BaseSettings):
     # ---- Machine learning ----
     ml_model_path: str = "./app/ml/artifacts/isolation_forest.joblib"
     ml_model_config_path: str = "./app/ml/artifacts/model_config.json"
+    # Dataset-space models are stored separately so they can never overwrite
+    # the active stream model.
+    ml_offline_model_dir: str = "./app/ml/artifacts/offline"
+    # Offline dataset models are fitted on benign training rows when labels
+    # are available. This prevents attack-heavy datasets (CICIoT2023) from
+    # teaching Isolation Forest that attacks are the normal baseline.
+    ml_offline_fit_on_benign: bool = True
+    # Validation threshold calibration maximises F1 subject to this precision
+    # floor. Set to 0.0 for pure F1; the optional FPR cap can be set with
+    # P310_ML_OFFLINE_CALIBRATION_MAX_FPR.
+    ml_offline_calibration_min_precision: float = 0.95
+    ml_offline_calibration_max_fpr: Optional[float] = None
     ml_contamination: float = 0.05
     # Fraction of the *training* distribution expected to be flagged at
     # inference time.  The decision threshold and the suspicious/critical
@@ -112,6 +124,11 @@ class Settings(BaseSettings):
         return p if p.is_absolute() else (BACKEND_DIR / p).resolve()
 
     @property
+    def offline_model_dir_absolute(self) -> Path:
+        p = Path(self.ml_offline_model_dir)
+        return p if p.is_absolute() else (BACKEND_DIR / p).resolve()
+
+    @property
     def database_path_absolute(self) -> Path:
         """Filesystem path of the SQLite database (empty for other engines)."""
         url = self.database_url
@@ -133,6 +150,24 @@ class Settings(BaseSettings):
     def _check_flag_quantile(cls, v: float) -> float:
         if not 0.0 < v < 0.5:
             raise ValueError("ml_flag_quantile must be between 0 and 0.5")
+        return v
+
+    @field_validator("ml_offline_calibration_min_precision")
+    @classmethod
+    def _check_offline_precision(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                "ml_offline_calibration_min_precision must be within [0, 1]"
+            )
+        return v
+
+    @field_validator("ml_offline_calibration_max_fpr")
+    @classmethod
+    def _check_offline_max_fpr(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and not 0.0 <= v <= 1.0:
+            raise ValueError(
+                "ml_offline_calibration_max_fpr must be within [0, 1]"
+            )
         return v
 
     @field_validator("sim_anomaly_probability")

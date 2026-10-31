@@ -61,3 +61,9 @@ Thumbs.db
 data/datasets/*
 !data/datasets/README.md
 !data/datasets/synthetic_sample.csv
+
+# CICIoT2023 datasets (download separately)
+datasets/*.parquet
+
+0001-Remove-leftover-Vite-starter-files-fix-artifacts-mou.patch
+0001-Remove-leftover-Vite-starter-files-fix-artifacts-mou.patch

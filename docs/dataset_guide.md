@@ -103,9 +103,18 @@ curl http://127.0.0.1:8000/datasets/ciciot2023
    at the most-variable 60 columns, and map arbitrary labels onto binary
    normal/attack.
 
+For labelled offline data, training uses a stratified 60/20/20
+train/validation/test split. Isolation Forest is fitted on benign training rows
+only, the alert threshold is selected on validation (default: maximise F1 with a
+0.95 precision floor), and the untouched test split supplies the reported
+metrics. This prevents attack-heavy datasets such as CICIoT2023 from teaching
+the model that attacks are the normal baseline. The optional API fields are
+`offline_fit_on_benign`, `calibration_min_precision`, and `calibration_max_fpr`;
+see `docs/offline_model_optimization.md` for the measured comparison.
+
 Metrics (precision/recall/F1 etc.) are reported **only** when a genuine
-ground-truth label column survives — and only on a held-out stratified split —
-so an unlabelled CSV never produces fabricated scores.
+ground-truth label column survives — and only on a held-out test split — so an
+unlabelled CSV never produces fabricated scores.
 
 ## 4. Training on a CSV
 

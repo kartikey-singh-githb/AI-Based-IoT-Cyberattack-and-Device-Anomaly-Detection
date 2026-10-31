@@ -126,7 +126,9 @@ Interactive docs: <http://127.0.0.1:8000/docs>
 * **Public datasets** (CICIoT2023, MQTT IoT IDS 2020): documented in
   `data/datasets/README.md`. Because their features are flow statistics the
   live pipeline cannot reproduce, models trained on them live in a separate
-  `dataset` feature space and are **refused** for live inference.
+  `dataset` feature space and are **refused** for live inference. They are
+  saved as versioned offline artifacts under `backend/app/ml/artifacts/offline/`
+  and never replace the active stream model or live MQTT detector.
 
 Details: `docs/ml_methodology.md`.
 

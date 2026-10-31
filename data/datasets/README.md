@@ -57,5 +57,29 @@ curl -X POST http://127.0.0.1:8000/model/train \
      -d '{"dataset":"csv","csv_path":"ciciot2023.csv","label_column":"label"}'
 ```
 
+### Loading a Parquet file
+
+The loader chooses CSV or Parquet from the file extension and accepts absolute
+paths on the machine running the backend, for example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/model/train \
+     -H 'Content-Type: application/json' \
+     -d '{"dataset":"parquet",
+          "dataset_path":"D:\\datasets\\ciciot2023_train.parquet",
+          "label_column":"label",
+          "limit_rows":50000}'
+```
+
+`limit_rows` is a reproducible random sample (`random_state=42`), not the first
+N rows. Omit it for the default 50,000 rows, or set it to `0` to load every row.
+For CICIoT2023 the explicit target is the binary `label` column (0 = benign,
+1 = attack); `Label` and `attack_class` are excluded from model input.
+
+Dataset-space models are saved as versioned `backend/app/ml/artifacts/offline/
+<version>.joblib` and `<version>.json` files. They are **offline only**: they do
+not replace or activate the stream model used by the live MQTT detector, and no
+active-model database record is changed.
+
 Metrics are reported only when a ground-truth label column exists, and only on
 a held-out stratified split.
