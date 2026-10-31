@@ -27,7 +27,7 @@ services:
       P310_LOG_LEVEL: INFO
     volumes:
       - p310-data:/data
-      - ./backend/app/ml/artifacts:/app/ml/artifacts
+      - ./backend/app/ml/artifacts:/app/app/ml/artifacts
     depends_on:
       mosquitto:
         condition: service_started
